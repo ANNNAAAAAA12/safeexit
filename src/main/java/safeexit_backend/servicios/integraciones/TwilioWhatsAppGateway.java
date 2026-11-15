@@ -21,16 +21,20 @@ public class TwilioWhatsAppGateway implements WhatsAppGateway {
     private final String authToken;
     private final String sender;
     private final String publicUrl;
+    private final String contentSid;
 
     public TwilioWhatsAppGateway(
             RestClient.Builder restClientBuilder,
             @Value("${safeexit.integrations.twilio.account-sid}") String accountSid,
             @Value("${safeexit.integrations.twilio.auth-token}") String authToken,
             @Value("${safeexit.integrations.twilio.sender}") String sender,
-            @Value("${safeexit.integrations.twilio.public-url:}") String publicUrl) {
-        if (accountSid.isBlank() || authToken.isBlank() || sender.isBlank() || publicUrl.isBlank()) {
+            @Value("${safeexit.integrations.twilio.public-url:}") String publicUrl,
+            @Value("${safeexit.integrations.twilio.content-sid:}") String contentSid) {
+        if (accountSid.isBlank() || authToken.isBlank() || sender.isBlank()
+                || publicUrl.isBlank() || contentSid.isBlank()) {
             throw new IllegalStateException(
-                    "Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_SENDER y SAFEEXIT_PUBLIC_URL");
+                    "Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_SENDER, "
+                            + "TWILIO_WHATSAPP_CONTENT_SID y SAFEEXIT_PUBLIC_URL");
         }
         this.restClient = restClientBuilder
                 .baseUrl("https://api.twilio.com/2010-04-01/Accounts/" + accountSid)
@@ -39,6 +43,7 @@ public class TwilioWhatsAppGateway implements WhatsAppGateway {
         this.authToken = authToken;
         this.sender = sender;
         this.publicUrl = publicUrl == null ? "" : publicUrl.replaceAll("/+$", "");
+        this.contentSid = contentSid == null ? "" : contentSid.trim();
     }
 
     @Override
@@ -46,7 +51,7 @@ public class TwilioWhatsAppGateway implements WhatsAppGateway {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("From", normalizarNumeroWhatsApp(sender));
         body.add("To", normalizarNumeroWhatsApp(telefono));
-        body.add("Body", mensaje);
+        body.add("ContentSid", contentSid);
         if (!publicUrl.isBlank()) {
             body.add("StatusCallback", publicUrl + "/api/v1/webhooks/twilio/whatsapp");
         }

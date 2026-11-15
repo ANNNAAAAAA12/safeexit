@@ -185,18 +185,19 @@ Configura las variables mediante el panel del proveedor o un archivo `.env` loca
 | `MOCK_PLATE` | Placa devuelta por el OCR simulado |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Credenciales privadas de la cuenta Twilio |
 | `TWILIO_WHATSAPP_SENDER` | Remitente de WhatsApp de Twilio, por ejemplo `whatsapp:+14155238886` para Sandbox |
+| `TWILIO_WHATSAPP_CONTENT_SID` | `ContentSid` de la plantilla aprobada para el remitente |
 | `SAFEEXIT_PUBLIC_URL` | URL pública base del backend para recibir callbacks de estado |
 | `SAFEEXIT_CACHE_ENABLED` | Caché local con TTL de 60 segundos |
 | `PORT` | Puerto asignado por la plataforma |
 
 ### Activar WhatsApp real con Twilio
 
-1. Crea una cuenta Twilio y activa WhatsApp Sandbox para pruebas o configura un remitente aprobado para producción. En Sandbox, cada teléfono destinatario debe unirse al Sandbox antes de recibir mensajes.
-2. En `.env`, establece `SAFEEXIT_WHATSAPP_MODE=real`, mantén `SAFEEXIT_PLATE_OCR_MODE=mock` y completa `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_WHATSAPP_SENDER`. No publiques ni compartas el archivo `.env`.
+1. Crea una cuenta Twilio y activa WhatsApp Sandbox para pruebas o configura un remitente aprobado para producción. En cuenta Trial, verifica el teléfono destinatario en Twilio y únelo al Sandbox; solo los números verificados pueden recibir mensajes.
+2. En `.env`, establece `SAFEEXIT_WHATSAPP_MODE=real`, mantén `SAFEEXIT_PLATE_OCR_MODE=mock` y completa `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_SENDER` y `TWILIO_WHATSAPP_CONTENT_SID`. No publiques ni compartas el archivo `.env`.
 3. Configura `SAFEEXIT_PUBLIC_URL` con una URL HTTPS pública que llegue al backend. Para probar localmente puedes exponer el puerto `8081` con un túnel HTTPS; en producción usa la URL pública del backend. Twilio la necesita para reportar si el mensaje fue entregado o falló.
 4. Recrea la API con `docker compose up -d --build --force-recreate safeexit-api` y prueba una lectura que genere alerta con un residente que haya autorizado su teléfono.
 
-El envío real depende de la cuenta, el remitente y las condiciones/costos de Twilio. Con `SAFEEXIT_WHATSAPP_MODE=mock`, la demo solo registra intentos; no contacta a nadie. `PLATE_RECOGNIZER_TOKEN` solo es necesario si también activas `SAFEEXIT_PLATE_OCR_MODE=real`.
+El envío real depende de la cuenta, el remitente, la plantilla y las condiciones/costos de Twilio. Cuando `TWILIO_WHATSAPP_CONTENT_SID` está configurado, Twilio envía el contenido aprobado de esa plantilla, no el texto libre del registro interno. Las plantillas del Sandbox pueden ser fijas; para incluir dinámicamente placa y documentos se necesita una plantilla aprobada con variables y configurar `ContentVariables`. Con `SAFEEXIT_WHATSAPP_MODE=mock`, la demo solo registra intentos; no contacta a nadie. `PLATE_RECOGNIZER_TOKEN` solo es necesario si también activas `SAFEEXIT_PLATE_OCR_MODE=real`.
 
 ## Despliegue gratuito para demostración
 
