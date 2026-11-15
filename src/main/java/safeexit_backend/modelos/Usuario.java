@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "usuarios")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -29,10 +30,20 @@ public class Usuario {
     @Column(length = 20)
     private String telefonoWhatsapp;
 
-    @Column(nullable = false, length = 20)
-    private String rol; // ROLE_ADMIN, ROLE_RESIDENTE
+    @Column(nullable = false, length = 30)
+    private String rol;
 
-    @Column(name = "creado_en")
+    @Column
+    @Builder.Default
+    private Boolean activo = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conjunto_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private ConjuntoResidencial conjunto;
+
+    @Column(name = "creado_en", nullable = false, updatable = false)
     private LocalDateTime creadoEn;
 
     @PrePersist

@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "conjuntos_residenciales")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,6 +22,6 @@ public class ConjuntoResidencial {
     @Column(nullable = false, length = 150)
     private String direccion;
 
-    @Column(length = 50)
-    private String ciudad;
+    @Column(unique = true, length = 30)
+    private String nit;
 }

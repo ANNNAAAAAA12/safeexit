@@ -38,6 +38,12 @@ build/
 *.war
 .vscode/
 .idea/
+.env
+.env.*
+!.env.example
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
 
 # JDKs must not be stored in the source tree or committed.
 /src/main/java/safeexit_backend/controladores/oracleJdk-27/
