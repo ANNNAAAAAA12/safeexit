@@ -13,7 +13,7 @@ import safeexit_backend.excepciones.ServicioExternoException;
 import safeexit_backend.modelos.EstadoEntrega;
 
 @Service
-@ConditionalOnProperty(name = "safeexit.integrations.mode", havingValue = "real")
+@ConditionalOnProperty(name = "safeexit.integrations.whatsapp-mode", havingValue = "real")
 public class TwilioWhatsAppGateway implements WhatsAppGateway {
 
     private final RestClient restClient;

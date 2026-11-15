@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { jsonBody, request, requestBlob } from './api'
 import { Icon } from './icons'
 import type {
@@ -48,11 +48,12 @@ function useResource<T>(session: Session, path: string, enabled = true) {
   }, [enabled, key, path, session])
 
   const isCurrent = state.key === key
+  const reload = useCallback(() => setVersion((current) => current + 1), [])
   return {
     data: isCurrent ? state.data : null,
     loading: enabled && (!isCurrent || state.loading),
     error: isCurrent ? state.error : '',
-    reload: () => setVersion((current) => current + 1),
+    reload,
   }
 }
 
@@ -135,6 +136,16 @@ export function DashboardPage({
 }) {
   const metrics = useResource<Metrics>(session, '/admin/metricas')
   const alerts = useResource<Alert[]>(session, '/alertas/historial')
+  const reloadMetrics = metrics.reload
+  const reloadAlerts = alerts.reload
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      reloadMetrics()
+      reloadAlerts()
+    }, 10_000)
+    return () => window.clearInterval(interval)
+  }, [reloadAlerts, reloadMetrics])
 
   return (
     <div className="page-stack">
@@ -158,7 +169,7 @@ export function DashboardPage({
           <h2>Resumen de actividad</h2>
           <p>Indicadores generales del conjunto residencial</p>
         </div>
-        <span className="updated-label"><span className="status-dot status-dot-green" />Datos en vivo</span>
+        <span className="updated-label"><span className="status-dot status-dot-green" />Actualización cada 10 s</span>
       </div>
 
       {metrics.error && <ErrorState message={metrics.error} />}
@@ -166,7 +177,13 @@ export function DashboardPage({
         <MetricCard label="Vehículos" value={metrics.loading ? '—' : metrics.data?.vehiculosRegistrados ?? 0} hint="Registrados en el conjunto" icon="car" tone="mint" />
         <MetricCard label="Lecturas" value={metrics.loading ? '—' : metrics.data?.lecturasProcesadas ?? 0} hint="Procesadas por cámara" icon="activity" tone="blue" />
         <MetricCard label="Alertas" value={metrics.loading ? '—' : metrics.data?.alertasGeneradas ?? 0} hint="Preventivas generadas" icon="alert" tone="amber" />
-        <MetricCard label="Entrega WhatsApp" value={metrics.loading ? '—' : `${metrics.data?.porcentajeEntrega ?? 0}%`} hint={`${metrics.data?.mensajesEntregados ?? 0} mensajes entregados`} icon="check" tone="violet" />
+        <MetricCard
+          label="Intentos WhatsApp"
+          value={metrics.loading ? '—' : metrics.data?.mensajesWhatsapp ?? 0}
+          hint={`${metrics.data?.mensajesEntregados ?? 0} entregados · ${metrics.data?.mensajesFallidos ?? 0} fallidos · ${metrics.data?.porcentajeEntrega ?? 0}% entrega`}
+          icon="check"
+          tone="violet"
+        />
       </div>
 
       <div className="dashboard-columns">
@@ -186,7 +203,7 @@ export function DashboardPage({
       </div>
       <div className="role-note">
         <Icon name="shield" size={17} />
-        <span>El reconocimiento de placas y los avisos funcionan en modo de demostración.</span>
+        <span>La cámara y el OCR son simulados; WhatsApp usa el modo configurado (demo o Twilio real).</span>
       </div>
     </div>
   )

@@ -188,6 +188,15 @@ class AutenticacionApiTests {
                 .andExpect(jsonPath("$.soat.estado").value("VENCIDO"))
                 .andExpect(jsonPath("$.motivosAlerta[0]").value("SOAT_VENCIDO"))
                 .andExpect(jsonPath("$.estadoNotificacion").value("ENVIADO"));
+
+        mockMvc.perform(get("/api/v1/admin/metricas")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lecturasProcesadas").value(2))
+                .andExpect(jsonPath("$.alertasGeneradas").value(2))
+                .andExpect(jsonPath("$.mensajesWhatsapp").value(2))
+                .andExpect(jsonPath("$.mensajesEntregados").value(1))
+                .andExpect(jsonPath("$.porcentajeEntrega").value(50.0));
     }
 
     private String login(String correo, String contrasena) throws Exception {

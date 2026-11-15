@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClientException;
 import safeexit_backend.excepciones.ServicioExternoException;
 
 @Service
-@ConditionalOnProperty(name = "safeexit.integrations.mode", havingValue = "real")
+@ConditionalOnProperty(name = "safeexit.integrations.plate-recognizer.mode", havingValue = "real")
 public class PlateRecognizerClient implements PlateOcrService {
 
     private final RestClient restClient;

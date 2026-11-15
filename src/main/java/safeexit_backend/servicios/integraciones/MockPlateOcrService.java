@@ -7,7 +7,7 @@ import org.springframework.util.StringUtils;
 import safeexit_backend.excepciones.ServicioExternoException;
 
 @Service
-@ConditionalOnProperty(name = "safeexit.integrations.mode", havingValue = "mock", matchIfMissing = true)
+@ConditionalOnProperty(name = "safeexit.integrations.plate-recognizer.mode", havingValue = "mock", matchIfMissing = true)
 public class MockPlateOcrService implements PlateOcrService {
 
     private final String placaSimulada;

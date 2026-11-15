@@ -58,7 +58,7 @@ export function CameraPage({
       <div className="camera-demo-notice" role="note">
         <Icon name="shield" size={18} />
         <span>
-          <strong>Cámara de edificio simulada:</strong> no hay una cámara conectada. Al simular una salida, SafeExit guarda la lectura, revisa los documentos registrados y crea una alerta para el residente si corresponde. WhatsApp también es simulado.
+          <strong>Cámara de edificio simulada:</strong> no hay una cámara conectada. Al simular una salida, SafeExit guarda la lectura, revisa los documentos registrados y crea una alerta para el residente si corresponde. WhatsApp solo se envía de verdad cuando Twilio está configurado; de lo contrario, se simula.
         </span>
       </div>
 

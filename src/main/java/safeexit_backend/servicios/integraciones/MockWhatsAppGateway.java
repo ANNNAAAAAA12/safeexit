@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
-@ConditionalOnProperty(name = "safeexit.integrations.mode", havingValue = "mock", matchIfMissing = true)
+@ConditionalOnProperty(name = "safeexit.integrations.whatsapp-mode", havingValue = "mock", matchIfMissing = true)
 public class MockWhatsAppGateway implements WhatsAppGateway {
 
     private final List<MensajeSimulado> mensajes = new CopyOnWriteArrayList<>();

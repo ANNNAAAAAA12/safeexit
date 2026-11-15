@@ -46,7 +46,7 @@ PostgreSQL conserva datos en el volumen `postgres_data`. Si cambias `DB_PASSWORD
 
 ## Demostración rápida
 
-Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas, revisar auditorías y abrir **Cámara**. Como no hay una cámara física conectada, esa pantalla simula una lectura: escribe la placa registrada y pulsa **Simular salida del vehículo**. SafeExit guarda la lectura, analiza SOAT/RTM y crea una alerta para el residente si corresponde. WhatsApp es un envío simulado; no se manda un mensaje real. Los residentes pueden registrar vehículos sin escribir fechas: el mock les asigna vencimientos sintéticos. En **Mis vehículos** pueden simular un escaneo propio escribiendo su placa para consultar el estado guardado. No hay OCR real ni consulta oficial al RUNT en esta demo.
+Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas, revisar auditorías y abrir **Cámara**. Como no hay una cámara física conectada, esa pantalla simula una lectura: escribe la placa registrada y pulsa **Simular salida del vehículo**. SafeExit guarda la lectura, analiza SOAT/RTM y crea una alerta para el residente si corresponde. En modo predeterminado (`SAFEEXIT_WHATSAPP_MODE=mock`) no sale ningún mensaje real. El panel actualiza las métricas cada 10 segundos; las lecturas, alertas e intentos de WhatsApp se cuentan por separado, y la entrega real se confirma mediante el callback de Twilio. Los residentes pueden registrar vehículos sin escribir fechas: el mock les asigna vencimientos sintéticos. En **Mis vehículos** pueden simular un escaneo propio escribiendo su placa para consultar el estado guardado. No hay OCR real ni consulta oficial al RUNT en esta demo.
 
 Para comprobar el flujo de alertas, registra un vehículo `ABC123` en la cuenta residente y luego, como administrador, abre **Cámara**, escribe `ABC123` y pulsa **Simular salida del vehículo**. En el mock, esa placa tiene el SOAT vencido: debe aparecer una alerta en la pantalla y en el historial del residente. El residente puede ingresar de nuevo y verla en **Mis alertas**.
 
@@ -118,11 +118,11 @@ El mock simula una lectura OCR; no reconoce placas en la imagen. Con el vehícul
 Invoke-RestMethod -Uri http://localhost:8081/api/v1/alertas/historial -Headers $headersResidente
 ```
 
-La API registra la lectura, el evento y el envío simulado. Esta llamada es independiente de la vista **Cámara** del frontend, que solo muestra video y resultados sintéticos de SOAT/RTM.
+La API registra la lectura, el evento y el intento de notificación. Esta llamada es independiente de la pantalla **Cámara**, que permite simular la placa y muestra el resultado del procesamiento.
 
 ## Frontend
 
-El frontend es una SPA de React y TypeScript. Muestra pantallas según el rol del JWT: administrador (resumen, cámara de demo, usuarios, alertas y auditoría), residente (vehículos, alertas y teléfono) y auditor (solo auditoría). La pantalla Cámara usa la cámara del dispositivo, pero la placa y las fechas de documentos son simuladas. No necesita CORS en Docker porque Nginx sirve la aplicación y reenvía las llamadas a la API en el mismo origen.
+El frontend es una SPA de React y TypeScript. Muestra pantallas según el rol del JWT: administrador (resumen, cámara de demo, usuarios, alertas y auditoría), residente (vehículos, alertas y teléfono) y auditor (solo auditoría). La pantalla Cámara simula una cámara del edificio y la placa; no captura video ni ejecuta OCR. No necesita CORS en Docker porque Nginx sirve la aplicación y reenvía las llamadas a la API en el mismo origen.
 
 Para desarrollo sin Docker, inicia primero el backend y después ejecuta:
 
@@ -179,12 +179,24 @@ Configura las variables mediante el panel del proveedor o un archivo `.env` loca
 | `RESIDENTIAL_NAME`, `RESIDENTIAL_ADDRESS`, `RESIDENTIAL_NIT` | Conjunto inicial |
 | `ALERT_ADVANCE_DAYS` | Anticipación predeterminada; 5 días |
 | `SAFEEXIT_ALERT_TEMPLATE` | Plantilla; admite `{nivel}`, `{placa}` y `{motivos}` |
-| `SAFEEXIT_INTEGRATIONS_MODE` | `mock` (predeterminado) o `real` |
+| `SAFEEXIT_WHATSAPP_MODE` | `mock` (predeterminado) o `real`, independiente del OCR |
+| `SAFEEXIT_PLATE_OCR_MODE` | `mock` (predeterminado) o `real`, independiente de WhatsApp |
+| `SAFEEXIT_INTEGRATIONS_MODE` | Fallback compatible con configuraciones anteriores; prefiere las dos variables específicas |
 | `MOCK_PLATE` | Placa devuelta por el OCR simulado |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Credenciales privadas de la cuenta Twilio |
+| `TWILIO_WHATSAPP_SENDER` | Remitente de WhatsApp de Twilio, por ejemplo `whatsapp:+14155238886` para Sandbox |
+| `SAFEEXIT_PUBLIC_URL` | URL pública base del backend para recibir callbacks de estado |
 | `SAFEEXIT_CACHE_ENABLED` | Caché local con TTL de 60 segundos |
 | `PORT` | Puerto asignado por la plataforma |
 
-Para `SAFEEXIT_INTEGRATIONS_MODE=real`, configura `PLATE_RECOGNIZER_TOKEN`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_SENDER` y `SAFEEXIT_PUBLIC_URL`. Twilio necesita la URL pública para enviar callbacks de estado. Estas cuentas y sus cuotas son independientes del costo del alojamiento.
+### Activar WhatsApp real con Twilio
+
+1. Crea una cuenta Twilio y activa WhatsApp Sandbox para pruebas o configura un remitente aprobado para producción. En Sandbox, cada teléfono destinatario debe unirse al Sandbox antes de recibir mensajes.
+2. En `.env`, establece `SAFEEXIT_WHATSAPP_MODE=real`, mantén `SAFEEXIT_PLATE_OCR_MODE=mock` y completa `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_WHATSAPP_SENDER`. No publiques ni compartas el archivo `.env`.
+3. Configura `SAFEEXIT_PUBLIC_URL` con una URL HTTPS pública que llegue al backend. Para probar localmente puedes exponer el puerto `8081` con un túnel HTTPS; en producción usa la URL pública del backend. Twilio la necesita para reportar si el mensaje fue entregado o falló.
+4. Recrea la API con `docker compose up -d --build --force-recreate safeexit-api` y prueba una lectura que genere alerta con un residente que haya autorizado su teléfono.
+
+El envío real depende de la cuenta, el remitente y las condiciones/costos de Twilio. Con `SAFEEXIT_WHATSAPP_MODE=mock`, la demo solo registra intentos; no contacta a nadie. `PLATE_RECOGNIZER_TOKEN` solo es necesario si también activas `SAFEEXIT_PLATE_OCR_MODE=real`.
 
 ## Despliegue gratuito para demostración
 
