@@ -47,6 +47,30 @@ class TwilioWhatsAppGatewayTests {
     }
 
     @Test
+    void sendsWithoutStatusCallbackWhenPublicUrlIsNotConfigured() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://api.twilio.com/2010-04-01/Accounts/AC_TEST/Messages.json"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(not(containsString("StatusCallback="))))
+                .andRespond(withSuccess("{\"sid\":\"SM_TEST\"}", MediaType.APPLICATION_JSON));
+
+        TwilioWhatsAppGateway gateway = new TwilioWhatsAppGateway(
+                builder,
+                "AC_TEST",
+                "test-auth-token",
+                "whatsapp:+14155238886",
+                "",
+                "HX_TEST");
+
+        var result = gateway.enviar("+573005296280", "Internal alert detail");
+
+        assertEquals("SM_TEST", result.idProveedor());
+        assertEquals(EstadoEntrega.ENVIADO, result.estado());
+        server.verify();
+    }
+
+    @Test
     void requiresAnApprovedContentTemplate() {
         assertThrows(IllegalStateException.class, () -> new TwilioWhatsAppGateway(
                 RestClient.builder(),

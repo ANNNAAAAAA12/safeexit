@@ -30,11 +30,10 @@ public class TwilioWhatsAppGateway implements WhatsAppGateway {
             @Value("${safeexit.integrations.twilio.sender}") String sender,
             @Value("${safeexit.integrations.twilio.public-url:}") String publicUrl,
             @Value("${safeexit.integrations.twilio.content-sid:}") String contentSid) {
-        if (accountSid.isBlank() || authToken.isBlank() || sender.isBlank()
-                || publicUrl.isBlank() || contentSid.isBlank()) {
+        if (accountSid.isBlank() || authToken.isBlank() || sender.isBlank() || contentSid.isBlank()) {
             throw new IllegalStateException(
-                    "Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_SENDER, "
-                            + "TWILIO_WHATSAPP_CONTENT_SID y SAFEEXIT_PUBLIC_URL");
+                    "Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_SENDER y "
+                            + "TWILIO_WHATSAPP_CONTENT_SID");
         }
         this.restClient = restClientBuilder
                 .baseUrl("https://api.twilio.com/2010-04-01/Accounts/" + accountSid)

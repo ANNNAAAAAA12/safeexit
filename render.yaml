@@ -34,6 +34,18 @@ services:
         sync: false
       - key: SAFEEXIT_INTEGRATIONS_MODE
         value: mock
+      - key: SAFEEXIT_WHATSAPP_MODE
+        value: real
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_SENDER
+        sync: false
+      - key: TWILIO_WHATSAPP_CONTENT_SID
+        sync: false
+      - key: SAFEEXIT_PUBLIC_URL
+        value: https://safeexit-backend.onrender.com
       - key: SAFEEXIT_CACHE_ENABLED
         value: "true"
   - type: web
