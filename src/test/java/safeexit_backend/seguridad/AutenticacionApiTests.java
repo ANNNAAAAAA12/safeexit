@@ -177,6 +177,17 @@ class AutenticacionApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mensajesEntregados").value(1))
                 .andExpect(jsonPath("$.porcentajeEntrega").value(100.0));
+
+        mockMvc.perform(post("/api/v1/admin/demo/lecturas")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("placa", "ABC123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vehiculoRegistrado").value(true))
+                .andExpect(jsonPath("$.placaDetectada").value("ABC123"))
+                .andExpect(jsonPath("$.soat.estado").value("VENCIDO"))
+                .andExpect(jsonPath("$.motivosAlerta[0]").value("SOAT_VENCIDO"))
+                .andExpect(jsonPath("$.estadoNotificacion").value("ENVIADO"));
     }
 
     private String login(String correo, String contrasena) throws Exception {

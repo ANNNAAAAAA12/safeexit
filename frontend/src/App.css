@@ -1320,6 +1320,35 @@
   object-fit: cover;
 }
 
+.camera-preview-simulated {
+  min-height: 205px;
+}
+
+.camera-preview-simulated .camera-placeholder {
+  background:
+    linear-gradient(rgba(99, 175, 150, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 175, 150, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 50% 35%, rgba(86, 145, 137, 0.26), transparent 40%),
+    #172a30;
+  background-size: 24px 24px, 24px 24px, auto, auto;
+}
+
+.camera-scan-line {
+  position: absolute;
+  right: 12%;
+  left: 12%;
+  top: 50%;
+  height: 1px;
+  background: rgba(91, 231, 183, 0.6);
+  box-shadow: 0 0 12px rgba(91, 231, 183, 0.5);
+  animation: camera-scan 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes camera-scan {
+  from { transform: translateY(-45px); opacity: 0.35; }
+  to { transform: translateY(45px); opacity: 0.85; }
+}
+
 .camera-placeholder {
   position: absolute;
   inset: 0;
@@ -1474,6 +1503,84 @@
   color: #8a989d;
   font-size: 9px;
   line-height: 1.45;
+}
+
+.camera-simulation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-test-hint {
+  margin: 14px 0 0;
+  padding: 10px 11px;
+  border-radius: 8px;
+  color: #788b8e;
+  background: #f5f8f7;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.camera-test-hint strong {
+  color: #2b7661;
+}
+
+.camera-registration-state {
+  margin: -4px 0 0;
+  color: #a64e40;
+  font-size: 10px;
+}
+
+.camera-registration-found {
+  color: #39836b;
+}
+
+.camera-alert-result {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid #f1d8d1;
+  border-radius: 8px;
+  color: #a64e40;
+  background: #fff7f5;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.camera-alert-result strong {
+  font-size: 10px;
+}
+
+.camera-alert-result small {
+  color: #9c746c;
+}
+
+.resident-scan-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resident-scan-panel .panel-heading {
+  margin-bottom: 0;
+}
+
+.resident-scan-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.resident-scan-result {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid #edf1f1;
+  border-radius: 10px;
+  background: #fbfdfc;
 }
 
 .manual-fallback-toggle {
@@ -2278,6 +2385,10 @@
 
   .camera-demo-notice {
     padding: 11px;
+  }
+
+  .resident-scan-form {
+    grid-template-columns: 1fr;
   }
 
   .camera-actions > .button {

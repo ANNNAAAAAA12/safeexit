@@ -14,9 +14,18 @@ public class MockVehicleDocumentsLookup implements VehicleDocumentsLookup {
     public DocumentDates consultar(String placa) {
         String normalizedPlate = placa.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
         int seed = normalizedPlate.hashCode();
-        int soatDays = Math.floorMod(seed, 365) - 15;
-        int rtmDays = Math.floorMod(seed * 31, 365) - 15;
+        int scenario = Math.floorMod(seed, 3);
         LocalDate today = LocalDate.now();
-        return new DocumentDates(today.plusDays(soatDays), today.plusDays(rtmDays));
+        LocalDate soat = switch (scenario) {
+            case 0 -> today.minusDays(1);
+            case 1 -> today.plusDays(3);
+            default -> today.plusDays(120);
+        };
+        LocalDate rtm = switch (scenario) {
+            case 0 -> today.plusDays(30);
+            case 1 -> today.plusDays(90);
+            default -> today.plusDays(180);
+        };
+        return new DocumentDates(soat, rtm);
     }
 }

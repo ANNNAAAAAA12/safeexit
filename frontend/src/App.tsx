@@ -23,7 +23,7 @@ const pageDetails: Record<View, { title: string; subtitle: string }> = {
   },
   camera: {
     title: 'Cámara de salida',
-    subtitle: 'Video local y consulta simulada de documentos.',
+    subtitle: 'Simula una lectura de cámara y el análisis de documentos.',
   },
   vehicles: {
     title: 'Mis vehículos',
@@ -313,7 +313,7 @@ function ApplicationShell({
             <DashboardPage session={session} onNotify={onNotify} />
           )}
           {view === 'camera' && role === 'ROLE_ADMIN' && (
-            <CameraPage session={session} />
+            <CameraPage session={session} onNotify={onNotify} />
           )}
           {view === 'vehicles' && role === 'ROLE_RESIDENT' && (
             <VehiclesPage session={session} onNotify={onNotify} />

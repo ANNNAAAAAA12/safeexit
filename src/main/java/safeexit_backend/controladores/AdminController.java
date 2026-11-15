@@ -11,6 +11,8 @@ import safeexit_backend.dto.ActualizarParametrosRequest;
 import safeexit_backend.dto.ActualizarConjuntoRequest;
 import safeexit_backend.dto.ConjuntoResponse;
 import safeexit_backend.dto.ConsultaDocumentosResponse;
+import safeexit_backend.dto.ProcesarSalidaResponse;
+import safeexit_backend.dto.SimularLecturaRequest;
 import safeexit_backend.dto.MetricasResponse;
 import safeexit_backend.dto.UsuarioResponse;
 import safeexit_backend.dto.ParametrosSistemaResponse;
@@ -19,6 +21,7 @@ import safeexit_backend.servicios.MetricasService;
 import safeexit_backend.servicios.ConjuntoResidencialService;
 import safeexit_backend.servicios.UsuarioService;
 import safeexit_backend.servicios.VehiculoService;
+import safeexit_backend.servicios.ProcesamientoSalidaService;
 
 import java.util.List;
 
@@ -31,18 +34,21 @@ public class AdminController {
     private final MetricasService metricasService;
     private final ConjuntoResidencialService conjuntoService;
     private final VehiculoService vehiculoService;
+    private final ProcesamientoSalidaService procesamientoSalidaService;
 
     public AdminController(
             UsuarioService usuarioService,
             ParametrosSistemaService parametrosService,
             MetricasService metricasService,
             ConjuntoResidencialService conjuntoService,
-            VehiculoService vehiculoService) {
+            VehiculoService vehiculoService,
+            ProcesamientoSalidaService procesamientoSalidaService) {
         this.usuarioService = usuarioService;
         this.parametrosService = parametrosService;
         this.metricasService = metricasService;
         this.conjuntoService = conjuntoService;
         this.vehiculoService = vehiculoService;
+        this.procesamientoSalidaService = procesamientoSalidaService;
     }
 
     @GetMapping("/usuarios")
@@ -90,6 +96,11 @@ public class AdminController {
             @AuthenticationPrincipal UserDetails usuario,
             @PathVariable String placa) {
         return vehiculoService.consultarDocumentosDemo(usuario.getUsername(), placa);
+    }
+
+    @PostMapping("/demo/lecturas")
+    public ProcesarSalidaResponse simularLectura(@Valid @RequestBody SimularLecturaRequest request) {
+        return procesamientoSalidaService.procesarPlacaSimulada(request.placa());
     }
 
     @PutMapping("/conjuntos/{id}")

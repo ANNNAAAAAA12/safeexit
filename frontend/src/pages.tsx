@@ -309,6 +309,22 @@ export function VehiclesPage({
   const [editSoat, setEditSoat] = useState('')
   const [editRtm, setEditRtm] = useState('')
   const [manualDates, setManualDates] = useState(false)
+  const [scanPlate, setScanPlate] = useState('')
+  const [scannedVehicle, setScannedVehicle] = useState<Vehicle | null>(null)
+  const [scanError, setScanError] = useState('')
+
+  function simulateResidentScan(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const normalizedPlate = scanPlate.trim().toUpperCase().replace(/\s/g, '')
+    const vehicle = vehicles.data?.find((item) => item.placa === normalizedPlate)
+    if (!vehicle) {
+      setScannedVehicle(null)
+      setScanError('No encontramos esa placa entre tus vehículos registrados.')
+      return
+    }
+    setScanError('')
+    setScannedVehicle(vehicle)
+  }
 
   async function addVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -368,6 +384,51 @@ export function VehiclesPage({
         <div><strong>{vehicles.data?.length ?? 0} vehículos registrados</strong><span>La demo simula la consulta de SOAT y RTM; no verifica datos oficiales.</span></div>
         <span className="summary-shield"><Icon name="shield" size={21} /></span>
       </div>
+      <section className="panel resident-scan-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Escanea tu placa</h2>
+            <p>Simula la lectura desde tu celular y revisa tus documentos registrados.</p>
+          </div>
+          <span className="camera-state camera-state-active"><span />Escaneo demo</span>
+        </div>
+        <form className="resident-scan-form" onSubmit={simulateResidentScan}>
+          <label className="field">
+            <span>Placa leída (simulada)</span>
+            <input
+              value={scanPlate}
+              onChange={(event) => setScanPlate(event.target.value.toUpperCase().replace(/\s/g, ''))}
+              placeholder="ABC123"
+              maxLength={6}
+              pattern="([A-Za-z]{3}[0-9]{3}|[A-Za-z]{3}[0-9]{2}[A-Za-z])"
+              required
+            />
+          </label>
+          <button className="button button-secondary" disabled={vehicles.loading || !vehicles.data?.length}>
+            <Icon name="search" size={16} /> Simular escaneo
+          </button>
+        </form>
+        <p className="demo-disclaimer">No hay OCR real en esta versión: escribe la placa que el teléfono habría leído. La consulta solo muestra tus vehículos.</p>
+        {scanError && <ErrorState message={scanError} />}
+        {scannedVehicle && (
+          <div className="resident-scan-result">
+            <div className="vehicle-card-top">
+              <span className="vehicle-icon"><Icon name="car" size={21} /></span>
+              <div className="vehicle-identity">
+                <strong>{scannedVehicle.placa}</strong>
+                <span>Resultado de consulta simulada</span>
+              </div>
+              <span className={`document-pill ${scannedVehicle.documentosAlDia ? 'document-ok' : 'document-alert'}`}>
+                <span />{scannedVehicle.documentosAlDia ? 'Al día' : 'Revisar'}
+              </span>
+            </div>
+            <div className="document-grid">
+              <DocumentDate label="SOAT" status={scannedVehicle.soat} />
+              <DocumentDate label="RTM" status={scannedVehicle.rtm} />
+            </div>
+          </div>
+        )}
+      </section>
       <div className="vehicle-layout">
         <PageCard title="Vehículos registrados" caption="Estado de SOAT y revisión técnico-mecánica">
           {vehicles.loading ? <LoadingState /> : vehicles.error ? <ErrorState message={vehicles.error} /> :

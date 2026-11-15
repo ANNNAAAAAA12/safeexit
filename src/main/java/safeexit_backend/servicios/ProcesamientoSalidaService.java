@@ -38,7 +38,21 @@ public class ProcesamientoSalidaService {
         if (!PLACA_COLOMBIANA.matcher(placa).matches()) {
             throw new ServicioExternoException("El servicio OCR no devolvió una placa colombiana válida");
         }
+        return procesarPlaca(placa, imagen, tipoContenido);
+    }
 
+    public ProcesarSalidaResponse procesarPlacaSimulada(String placaRecibida) {
+        if (!StringUtils.hasText(placaRecibida)) {
+            throw new IllegalArgumentException("La placa es obligatoria");
+        }
+        String placa = placaRecibida.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        if (!PLACA_COLOMBIANA.matcher(placa).matches()) {
+            throw new IllegalArgumentException("La placa debe tener el formato colombiano AAA123 o ABC12D");
+        }
+        return procesarPlaca(placa, null, null);
+    }
+
+    private ProcesarSalidaResponse procesarPlaca(String placa, byte[] imagen, String tipoContenido) {
         SalidaPersistenceService.DatosProcesamiento datos =
                 persistenceService.registrarLectura(placa, imagen, tipoContenido);
         if (datos.notificacionId() == null) {

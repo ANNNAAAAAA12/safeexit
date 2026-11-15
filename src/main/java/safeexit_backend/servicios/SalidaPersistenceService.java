@@ -3,6 +3,7 @@ package safeexit_backend.servicios;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import safeexit_backend.dto.EstadoDocumentoResponse;
 import safeexit_backend.dto.ProcesarSalidaResponse;
 import safeexit_backend.excepciones.RecursoNoEncontradoException;
 import safeexit_backend.modelos.*;
@@ -66,7 +67,7 @@ public class SalidaPersistenceService {
                     .imagenSalida(imagen)
                     .build());
             return new DatosProcesamiento(lectura.getId(), placa, false, false,
-                    List.of(), null, null, null, null);
+                    null, null, List.of(), null, null, null, null);
         }
 
         if (resumen.fechaVencSoat() == null || resumen.fechaVencRtm() == null) {
@@ -90,6 +91,7 @@ public class SalidaPersistenceService {
                 .build());
         if (verificacion.motivosAlerta().isEmpty()) {
             return new DatosProcesamiento(lectura.getId(), placa, true, true,
+                    mapearEstado(verificacion.soat()), mapearEstado(verificacion.rtm()),
                     List.of(), null, null, null, null);
         }
 
@@ -109,8 +111,13 @@ public class SalidaPersistenceService {
                 .alerta(alerta)
                 .build());
         return new DatosProcesamiento(lectura.getId(), placa, true, verificacion.documentosAlDia(),
+                mapearEstado(verificacion.soat()), mapearEstado(verificacion.rtm()),
                 verificacion.motivosAlerta(), alerta.getId(), notificacion.getId(),
                 resumen.telefono(), mensaje);
+    }
+
+    private EstadoDocumentoResponse mapearEstado(DocumentoVerificationService.EstadoDocumento estado) {
+        return new EstadoDocumentoResponse(estado.vencimiento(), estado.diasRestantes(), estado.estado());
     }
 
     @Transactional
@@ -127,6 +134,8 @@ public class SalidaPersistenceService {
             String placa,
             boolean vehiculoRegistrado,
             boolean documentosAlDia,
+            EstadoDocumentoResponse soat,
+            EstadoDocumentoResponse rtm,
             List<String> motivos,
             Long alertaId,
             Long notificacionId,
@@ -135,7 +144,7 @@ public class SalidaPersistenceService {
 
         public ProcesarSalidaResponse respuesta(String estadoNotificacion) {
             return new ProcesarSalidaResponse(lecturaId, placa, vehiculoRegistrado,
-                    documentosAlDia, motivos, estadoNotificacion);
+                    documentosAlDia, soat, rtm, motivos, estadoNotificacion);
         }
     }
 }

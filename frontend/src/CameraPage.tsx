@@ -1,138 +1,64 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { ApiError, request } from './api'
+import { useState, type FormEvent } from 'react'
+import { jsonBody, request } from './api'
 import { Icon } from './icons'
 import type { DocumentStatus, Session } from './types'
 
-interface DocumentLookup {
-  placa: string
-  fuenteConsulta: string
-  soat: DocumentStatus
-  rtm: DocumentStatus
+interface SimulatedReading {
+  lecturaId: number
+  placaDetectada: string
+  vehiculoRegistrado: boolean
   documentosAlDia: boolean
+  soat: DocumentStatus | null
+  rtm: DocumentStatus | null
+  motivosAlerta: string[]
+  estadoNotificacion: string
 }
 
-export function CameraPage({ session }: { session: Session }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const requestInProgress = useRef(false)
-  const [cameraActive, setCameraActive] = useState(false)
-  const [scanPaused, setScanPaused] = useState(false)
+export function CameraPage({
+  session,
+  onNotify,
+}: {
+  session: Session
+  onNotify: (notice: { kind: 'success' | 'error'; text: string }) => void
+}) {
   const [plate, setPlate] = useState('ABC123')
-  const [result, setResult] = useState<DocumentLookup | null>(null)
-  const [manualResult, setManualResult] = useState<DocumentLookup | null>(null)
-  const [lookupError, setLookupError] = useState('')
-  const [cameraError, setCameraError] = useState('')
-  const [lastScan, setLastScan] = useState('')
+  const [result, setResult] = useState<SimulatedReading | null>(null)
+  const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [manualSoat, setManualSoat] = useState('')
-  const [manualRtm, setManualRtm] = useState('')
 
-  useEffect(() => {
-    if (videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current
-    }
-  }, [cameraActive])
-
-  useEffect(() => () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-  }, [])
-
-  const lookupPlate = useCallback(async () => {
-    const normalizedPlate = plate.trim().toUpperCase().replace(/\s/g, '')
-    if (!/^[A-Z]{3}[0-9]{3}$|^[A-Z]{3}[0-9]{2}[A-Z]$/.test(normalizedPlate)) {
-      setLookupError('Escribe una placa colombiana válida para simular la consulta.')
-      return
-    }
-    if (requestInProgress.current) return
-
-    requestInProgress.current = true
-    setBusy(true)
-    setLookupError('')
-    setManualResult(null)
-    try {
-      const data = await request<DocumentLookup>(
-        `/admin/demo/consulta-documentos/${encodeURIComponent(normalizedPlate)}`,
-        session,
-      )
-      setResult(data)
-      setScanPaused(false)
-      setLastScan(new Date().toLocaleTimeString())
-    } catch (caught) {
-      const message = caught instanceof ApiError
-        ? caught.status === 404
-          ? 'No se encontró la placa en la consulta de demo. Puedes evaluar las fechas manualmente para esta revisión.'
-          : caught.message
-        : 'No fue posible consultar el servicio de demo. Puedes evaluar las fechas manualmente para esta revisión.'
-      setLookupError(message)
-      setResult(null)
-      setScanPaused(true)
-    } finally {
-      requestInProgress.current = false
-      setBusy(false)
-    }
-  }, [plate, session])
-
-  useEffect(() => {
-    if (!cameraActive || scanPaused) return
-    const firstScan = window.setTimeout(() => void lookupPlate(), 0)
-    const timer = window.setInterval(() => void lookupPlate(), 8000)
-    return () => {
-      window.clearTimeout(firstScan)
-      window.clearInterval(timer)
-    }
-  }, [cameraActive, lookupPlate, scanPaused])
-
-  async function startCamera() {
-    setCameraError('')
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Este navegador no permite acceso a la cámara. Usa “Consultar placa” para continuar con la demo.')
-      return
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false,
-      })
-      streamRef.current = stream
-      setScanPaused(false)
-      setCameraActive(true)
-    } catch {
-      setCameraError('No se pudo abrir la cámara. Revisa el permiso del navegador o consulta la placa manualmente.')
-    }
-  }
-
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-    if (videoRef.current) videoRef.current.srcObject = null
-    setCameraActive(false)
-  }
-
-  function evaluateManualFallback(event: FormEvent<HTMLFormElement>) {
+  async function simulateReading(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const normalizedPlate = plate.trim().toUpperCase().replace(/\s/g, '')
-    const soat = evaluateDate(manualSoat)
-    const rtm = evaluateDate(manualRtm)
-    setManualResult({
-      placa: normalizedPlate,
-      fuenteConsulta: 'INGRESO_MANUAL',
-      soat,
-      rtm,
-      documentosAlDia: soat.estado === 'VIGENTE' && rtm.estado === 'VIGENTE',
-    })
+    setError('')
     setResult(null)
-    setLookupError('')
-    setLastScan(new Date().toLocaleTimeString())
+    setBusy(true)
+    try {
+      const reading = await request<SimulatedReading>('/admin/demo/lecturas', session, {
+        method: 'POST',
+        body: jsonBody({ placa: normalizedPlate }),
+      })
+      setResult(reading)
+      onNotify({
+        kind: 'success',
+        text: reading.motivosAlerta.length
+          ? 'Lectura procesada; se generó una alerta de prueba para el residente.'
+          : 'Lectura procesada; no se requiere una alerta.',
+      })
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'No fue posible simular la lectura.'
+      setError(message)
+      onNotify({ kind: 'error', text: message })
+    } finally {
+      setBusy(false)
+    }
   }
-
-  const visibleResult = manualResult ?? result
 
   return (
     <div className="page-stack">
       <div className="camera-demo-notice" role="note">
         <Icon name="shield" size={18} />
         <span>
-          <strong>Modo de demostración:</strong> el video es de tu cámara, pero la placa y la consulta de SOAT/RTM son simuladas. No se consultan fuentes oficiales ni se envía el video.
+          <strong>Cámara de edificio simulada:</strong> no hay una cámara conectada. Al simular una salida, SafeExit guarda la lectura, revisa los documentos registrados y crea una alerta para el residente si corresponde. WhatsApp también es simulado.
         </span>
       </div>
 
@@ -140,102 +66,94 @@ export function CameraPage({ session }: { session: Session }) {
         <section className="panel camera-panel">
           <div className="panel-heading">
             <div>
-              <h2>Cámara de salida</h2>
-              <p>Vista en vivo con consulta simulada cada 8 segundos.</p>
+              <h2>Cámara del sótano</h2>
+              <p>Simula la llegada de una placa a la salida del conjunto.</p>
             </div>
-            <span className={`camera-state ${cameraActive ? 'camera-state-active' : ''}`}>
-              <span />{cameraActive ? 'En vivo' : 'Detenida'}
-            </span>
+            <span className="camera-state camera-state-active"><span />Simulador listo</span>
           </div>
 
-          <div className={`camera-preview ${cameraActive ? 'camera-preview-active' : ''}`}>
-            <video ref={videoRef} autoPlay muted playsInline />
-            {!cameraActive && (
-              <div className="camera-placeholder">
-                <span><Icon name="camera" size={30} /></span>
-                <strong>Vista previa de la cámara</strong>
-                <small>Al iniciar, el navegador solicitará permiso.</small>
-              </div>
-            )}
-            {cameraActive && <span className="camera-live-label"><span />VIDEO LOCAL</span>}
+          <div className="camera-preview camera-preview-simulated">
+            <div className="camera-placeholder">
+              <span><Icon name="camera" size={30} /></span>
+              <strong>Entrada de cámara simulada</strong>
+              <small>La lectura se iniciará al pulsar el botón.</small>
+            </div>
+            <span className="camera-live-label"><span />DEMO</span>
+            <span className="camera-scan-line" />
           </div>
 
-          <label className="field camera-plate-field">
-            <span>Placa de prueba que simulará la cámara</span>
-            <input
-              value={plate}
-              onChange={(event) => setPlate(event.target.value.toUpperCase().replace(/\s/g, ''))}
-              placeholder="ABC123"
-              maxLength={6}
-              aria-describedby="camera-plate-help"
-            />
-            <small id="camera-plate-help">El sistema no lee placas reales en esta versión demo.</small>
-          </label>
-
-          {cameraError && <p className="camera-inline-error" role="alert">{cameraError}</p>}
-          <div className="camera-actions">
-            {cameraActive ? (
-              <button className="button button-quiet" type="button" onClick={stopCamera}>Detener cámara</button>
-            ) : (
-              <button className="button button-primary" type="button" onClick={() => void startCamera()}>
-                <Icon name="camera" size={17} /> Iniciar cámara
-              </button>
-            )}
-            <button className="button button-secondary" type="button" onClick={() => void lookupPlate()} disabled={busy}>
-              {busy ? <span className="spinner spinner-dark" /> : <><Icon name="search" size={16} /> Consultar placa</>}
+          <form className="camera-simulation-form" onSubmit={simulateReading}>
+            <label className="field camera-plate-field">
+              <span>Placa que detecta la cámara simulada</span>
+              <input
+                value={plate}
+                onChange={(event) => setPlate(event.target.value.toUpperCase().replace(/\s/g, ''))}
+                placeholder="ABC123"
+                maxLength={6}
+                pattern="([A-Za-z]{3}[0-9]{3}|[A-Za-z]{3}[0-9]{2}[A-Za-z])"
+                required
+              />
+              <small>Usa la placa de un vehículo registrado en SafeExit.</small>
+            </label>
+            {error && <p className="camera-inline-error" role="alert">{error}</p>}
+            <button className="button button-primary button-wide" disabled={busy}>
+              {busy ? <span className="spinner" /> : <><Icon name="activity" size={17} /> Simular salida del vehículo</>}
             </button>
-          </div>
+          </form>
+
+          <p className="camera-test-hint">
+            Prueba sugerida: registra <strong>ABC123</strong> en una cuenta residente y simula su salida. En la demo esa placa tiene el SOAT vencido.
+          </p>
         </section>
 
         <section className="panel camera-result-panel">
           <div className="panel-heading">
             <div>
-              <h2>Consulta de documentos</h2>
-              <p>Resultado de SOAT y revisión técnico-mecánica.</p>
+              <h2>Resultado del análisis</h2>
+              <p>Lectura de salida y aviso asociado al vehículo.</p>
             </div>
-            {visibleResult && (
-              <span className={`document-pill ${visibleResult.documentosAlDia ? 'document-ok' : 'document-alert'}`}>
-                <span />{visibleResult.documentosAlDia ? 'Al día' : 'Revisar'}
+            {result && result.vehiculoRegistrado && (
+              <span className={`document-pill ${result.motivosAlerta.length ? 'document-alert' : 'document-ok'}`}>
+                <span />{result.motivosAlerta.length ? 'Alerta' : 'Sin alerta'}
               </span>
             )}
           </div>
 
-          {busy && !visibleResult && <div className="loading-state"><span className="spinner spinner-dark" />Consultando demo…</div>}
-          {!busy && !visibleResult && !lookupError && (
+          {!result && !busy && (
             <div className="camera-empty">
               <Icon name="search" size={22} />
-              <strong>Esperando una consulta</strong>
-              <span>Inicia la cámara o consulta la placa de prueba.</span>
+              <strong>Esperando una lectura</strong>
+              <span>Simula la salida de una placa para revisar el flujo completo.</span>
             </div>
           )}
-          {lookupError && <div className="camera-inline-error" role="alert">{lookupError}</div>}
-          {visibleResult && (
+          {busy && <div className="loading-state"><span className="spinner spinner-dark" />Analizando lectura…</div>}
+          {result && (
             <div className="camera-result-content">
               <div className="camera-result-plate">
-                <span>Placa consultada</span>
-                <strong>{visibleResult.placa}</strong>
+                <span>Placa detectada</span>
+                <strong>{result.placaDetectada}</strong>
               </div>
-              <div className="document-grid">
-                <DocumentResult label="SOAT" status={visibleResult.soat} />
-                <DocumentResult label="RTM" status={visibleResult.rtm} />
-              </div>
-              <p className="camera-source">
-                Fuente: {visibleResult.fuenteConsulta === 'SIMULADA' ? 'consulta simulada, no oficial' : 'ingreso manual para esta revisión'}.
-                {lastScan && <> Última consulta: {lastScan}.</>}
+              <p className={`camera-registration-state ${result.vehiculoRegistrado ? 'camera-registration-found' : ''}`}>
+                {result.vehiculoRegistrado
+                  ? `Vehículo registrado · lectura #${result.lecturaId}`
+                  : 'Vehículo no registrado · no se envió alerta'}
               </p>
+              {result.vehiculoRegistrado && result.soat && result.rtm && (
+                <div className="document-grid">
+                  <DocumentResult label="SOAT" status={result.soat} />
+                  <DocumentResult label="RTM" status={result.rtm} />
+                </div>
+              )}
+              {result.motivosAlerta.length > 0 ? (
+                <div className="camera-alert-result">
+                  <strong>Alerta creada para el residente</strong>
+                  <span>{result.motivosAlerta.map(humanize).join(' · ')}</span>
+                  <small>Notificación WhatsApp simulada: {result.estadoNotificacion}</small>
+                </div>
+              ) : result.vehiculoRegistrado ? (
+                <p className="camera-source">Documentos sin vencimientos que requieran alerta.</p>
+              ) : null}
             </div>
-          )}
-
-          {lookupError && (
-            <form className="camera-fallback-form" onSubmit={evaluateManualFallback}>
-              <strong>Respaldo manual para esta revisión</strong>
-              <div className="form-row">
-                <label className="field"><span>Vence SOAT</span><input type="date" value={manualSoat} onChange={(event) => setManualSoat(event.target.value)} required /></label>
-                <label className="field"><span>Vence RTM</span><input type="date" value={manualRtm} onChange={(event) => setManualRtm(event.target.value)} required /></label>
-              </div>
-              <button className="button button-secondary button-small">Evaluar fechas manuales</button>
-              <small>Este cálculo es solo para la demo actual; no guarda ni valida los documentos.</small>
-            </form>
           )}
         </section>
       </div>
@@ -259,16 +177,8 @@ function DocumentResult({ label, status }: { label: string; status: DocumentStat
   )
 }
 
-function evaluateDate(value: string): DocumentStatus {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const expiration = new Date(`${value}T00:00:00`)
-  const days = Math.round((expiration.getTime() - today.getTime()) / 86_400_000)
-  return {
-    fechaVencimiento: value,
-    diasRestantes: days,
-    estado: days < 0 ? 'VENCIDO' : days <= 5 ? 'POR_VENCER' : 'VIGENTE',
-  }
+function humanize(value: string): string {
+  return value.replaceAll('_', ' ').toLowerCase().replace(/^\w/, (letter) => letter.toUpperCase())
 }
 
 function formatDay(value: string): string {

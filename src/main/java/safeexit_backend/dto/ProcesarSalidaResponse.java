@@ -7,6 +7,8 @@ public record ProcesarSalidaResponse(
         String placaDetectada,
         boolean vehiculoRegistrado,
         boolean documentosAlDia,
+        EstadoDocumentoResponse soat,
+        EstadoDocumentoResponse rtm,
         List<String> motivosAlerta,
         String estadoNotificacion) {
 }

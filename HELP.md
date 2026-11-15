@@ -46,7 +46,9 @@ PostgreSQL conserva datos en el volumen `postgres_data`. Si cambias `DB_PASSWORD
 
 ## Demostración rápida
 
-Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas, revisar auditorías y abrir **Cámara**. La cámara muestra video local; la placa se simula y la consulta de SOAT/RTM devuelve datos sintéticos cada 8 segundos. El navegador debe tener permiso para usar la cámara. No se envía el video ni se leen placas reales. Los residentes pueden registrar vehículos sin escribir fechas: el mock les asigna fechas de SOAT/RTM. La opción de ingreso manual queda como respaldo.
+Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas, revisar auditorías y abrir **Cámara**. Como no hay una cámara física conectada, esa pantalla simula una lectura: escribe la placa registrada y pulsa **Simular salida del vehículo**. SafeExit guarda la lectura, analiza SOAT/RTM y crea una alerta para el residente si corresponde. WhatsApp es un envío simulado; no se manda un mensaje real. Los residentes pueden registrar vehículos sin escribir fechas: el mock les asigna vencimientos sintéticos. En **Mis vehículos** pueden simular un escaneo propio escribiendo su placa para consultar el estado guardado. No hay OCR real ni consulta oficial al RUNT en esta demo.
+
+Para comprobar el flujo de alertas, registra un vehículo `ABC123` en la cuenta residente y luego, como administrador, abre **Cámara**, escribe `ABC123` y pulsa **Simular salida del vehículo**. En el mock, esa placa tiene el SOAT vencido: debe aparecer una alerta en la pantalla y en el historial del residente. El residente puede ingresar de nuevo y verla en **Mis alertas**.
 
 También puedes usar la API directamente. El siguiente ejemplo crea un residente y registra un vehículo con el SOAT vencido para generar una alerta:
 
