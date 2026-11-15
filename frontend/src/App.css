@@ -1573,6 +1573,51 @@
   gap: 12px;
 }
 
+.resident-camera-start {
+  align-self: flex-start;
+}
+
+.resident-camera-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e6eceb;
+  border-radius: 10px;
+  background: #f7faf9;
+}
+
+.resident-camera-view video {
+  display: block;
+  width: 100%;
+  max-height: 380px;
+  border-radius: 7px;
+  background: #102323;
+  object-fit: contain;
+}
+
+.resident-camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resident-captured-photo {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  border: 1px solid #e6eceb;
+  border-radius: 8px;
+  background: #f7faf9;
+  object-fit: contain;
+}
+
+.resident-ocr-status {
+  margin: 0;
+  color: #387968;
+  font-size: 11px;
+}
+
 .resident-scan-result {
   display: flex;
   flex-direction: column;

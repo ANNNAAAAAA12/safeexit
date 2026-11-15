@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { createWorker, PSM, type Worker } from 'tesseract.js'
 import { jsonBody, request, requestBlob } from './api'
 import { Icon } from './icons'
 import type {
@@ -312,6 +313,42 @@ function AlertRow({ alert }: { alert: Alert }) {
   )
 }
 
+function extractColombianPlate(
+  text: string,
+  registeredPlates: string[],
+): { plate: string; corrected: boolean } | null {
+  const normalized = text.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const exact = normalized.match(/[A-Z]{3}(?:[0-9]{3}|[0-9]{2}[A-Z])/)
+  if (exact) return { plate: exact[0], corrected: false }
+
+  const confusingCharacters = new Set([
+    '0O', 'O0', '0Q', 'Q0', '1I', 'I1', '1L', 'L1',
+    '2Z', 'Z2', '5S', 'S5', '6G', 'G6', '8B', 'B8',
+  ])
+  const plateWindows = Array.from(
+    { length: Math.max(0, normalized.length - 5) },
+    (_, index) => normalized.slice(index, index + 6),
+  )
+  const closeMatches = new Set<string>()
+  for (const window of plateWindows) {
+    for (const registeredPlate of registeredPlates) {
+      const plate = registeredPlate.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (plate.length !== 6 || !/^[A-Z]{3}(?:[0-9]{3}|[0-9]{2}[A-Z])$/.test(plate)) continue
+      let differences = 0
+      for (let index = 0; index < plate.length; index += 1) {
+        if (window[index] === plate[index]) continue
+        if (!confusingCharacters.has(`${window[index]}${plate[index]}`)) {
+          differences = 3
+          break
+        }
+        differences += 1
+      }
+      if (differences > 0 && differences <= 2) closeMatches.add(plate)
+    }
+  }
+  return closeMatches.size === 1 ? { plate: [...closeMatches][0], corrected: true } : null
+}
+
 export function VehiclesPage({
   session,
   onNotify,
@@ -329,17 +366,155 @@ export function VehiclesPage({
   const [scanPlate, setScanPlate] = useState('')
   const [scannedVehicle, setScannedVehicle] = useState<Vehicle | null>(null)
   const [scanError, setScanError] = useState('')
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [cameraError, setCameraError] = useState('')
+  const [recognizingPlate, setRecognizingPlate] = useState(false)
+  const [recognitionProgress, setRecognitionProgress] = useState(0)
+  const [plateConfidence, setPlateConfidence] = useState<number | null>(null)
+  const [plateWasCorrected, setPlateWasCorrected] = useState(false)
+  const [capturedPhoto, setCapturedPhoto] = useState('')
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const ocrWorkerRef = useRef<Worker | null>(null)
+
+  useEffect(() => {
+    if (!cameraStream) return
+    const video = videoRef.current
+    if (video) {
+      video.srcObject = cameraStream
+      void video.play().catch(() => {
+        setCameraError('No se pudo iniciar la vista de cámara. Cierra y vuelve a activar la cámara.')
+      })
+    }
+    return () => {
+      cameraStream.getTracks().forEach((track) => track.stop())
+      if (video) video.srcObject = null
+    }
+  }, [cameraStream])
+
+  useEffect(() => () => {
+    if (ocrWorkerRef.current) void ocrWorkerRef.current.terminate()
+  }, [])
+
+  useEffect(() => () => {
+    if (capturedPhoto) URL.revokeObjectURL(capturedPhoto)
+  }, [capturedPhoto])
+
+  async function startResidentCamera() {
+    setCameraError('')
+    setScanError('')
+    setScannedVehicle(null)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Este navegador no permite usar la cámara. Puedes escribir la placa manualmente.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      })
+      setCameraStream(stream)
+    } catch (caught) {
+      const name = caught instanceof Error ? caught.name : ''
+      setCameraError(name === 'NotAllowedError' || name === 'PermissionDeniedError'
+        ? 'No se concedió permiso para usar la cámara. Habilítalo en el navegador o escribe la placa.'
+        : 'No fue posible acceder a una cámara. Puedes escribir la placa manualmente.')
+    }
+  }
+
+  function closeResidentCamera() {
+    setCameraStream(null)
+  }
+
+  async function captureAndRecognizePlate() {
+    const video = videoRef.current
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      setCameraError('Espera a que la cámara enfoque la placa e inténtalo de nuevo.')
+      return
+    }
+
+    setCameraError('')
+    setScanError('')
+    setScannedVehicle(null)
+    setPlateConfidence(null)
+    setPlateWasCorrected(false)
+    setRecognitionProgress(0)
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const context = canvas.getContext('2d')
+    if (!context) {
+      setCameraError('No fue posible procesar la foto en este navegador.')
+      return
+    }
+    context.filter = 'grayscale(1) contrast(1.35)'
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    try {
+      const photo = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob)
+          else reject(new Error('No fue posible capturar la foto.'))
+        }, 'image/jpeg', 0.92)
+      })
+      setCapturedPhoto(URL.createObjectURL(photo))
+      closeResidentCamera()
+      setRecognizingPlate(true)
+
+      let worker = ocrWorkerRef.current
+      if (!worker) {
+        worker = await createWorker('eng', 1, {
+          logger: ({ status, progress }) => {
+            if (status === 'recognizing text') setRecognitionProgress(Math.round(progress * 100))
+          },
+        })
+        ocrWorkerRef.current = worker
+      }
+
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+        tessedit_pageseg_mode: PSM.SINGLE_LINE,
+      })
+      let result = await worker.recognize(photo)
+      let recognition = extractColombianPlate(result.data.text, vehicles.data?.map((vehicle) => vehicle.placa) ?? [])
+      if (!recognition) {
+        await worker.setParameters({
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+          tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+        })
+        result = await worker.recognize(photo)
+        recognition = extractColombianPlate(result.data.text, vehicles.data?.map((vehicle) => vehicle.placa) ?? [])
+      }
+      if (!recognition) {
+        setScanPlate('')
+        setScanError('El OCR no pudo confirmar la placa. A veces confunde letras con números; revisa la foto, corrige el campo manualmente o vuelve a tomarla.')
+      } else {
+        setScanPlate(recognition.plate)
+        setPlateConfidence(Math.round(result.data.confidence))
+        setPlateWasCorrected(recognition.corrected)
+      }
+    } catch (caught) {
+      setScanError(caught instanceof Error
+        ? `No se pudo reconocer la placa: ${caught.message}`
+        : 'No se pudo reconocer la placa. Inténtalo otra vez o escríbela manualmente.')
+    } finally {
+      setRecognizingPlate(false)
+    }
+  }
 
   function simulateResidentScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const normalizedPlate = scanPlate.trim().toUpperCase().replace(/\s/g, '')
+    setScanError('')
+    setScannedVehicle(null)
     const vehicle = vehicles.data?.find((item) => item.placa === normalizedPlate)
     if (!vehicle) {
-      setScannedVehicle(null)
       setScanError('No encontramos esa placa entre tus vehículos registrados.')
       return
     }
-    setScanError('')
     setScannedVehicle(vehicle)
   }
 
@@ -405,27 +580,84 @@ export function VehiclesPage({
         <div className="panel-heading">
           <div>
             <h2>Escanea tu placa</h2>
-            <p>Simula la lectura desde tu celular y revisa tus documentos registrados.</p>
+            <p>Toma una foto para reconocer la placa y revisar tus documentos registrados.</p>
           </div>
-          <span className="camera-state camera-state-active"><span />Escaneo demo</span>
+          <span className="camera-state camera-state-active"><span />Cámara del residente</span>
         </div>
-        <form className="resident-scan-form" onSubmit={simulateResidentScan}>
-          <label className="field">
-            <span>Placa leída (simulada)</span>
-            <input
-              value={scanPlate}
-              onChange={(event) => setScanPlate(event.target.value.toUpperCase().replace(/\s/g, ''))}
-              placeholder="ABC123"
-              maxLength={6}
-              pattern="([A-Za-z]{3}[0-9]{3}|[A-Za-z]{3}[0-9]{2}[A-Za-z])"
-              required
-            />
-          </label>
-          <button className="button button-secondary" disabled={vehicles.loading || !vehicles.data?.length}>
-            <Icon name="search" size={16} /> Simular escaneo
-          </button>
-        </form>
-        <p className="demo-disclaimer">No hay OCR real en esta versión: escribe la placa que el teléfono habría leído. La consulta solo muestra tus vehículos.</p>
+        {vehicles.loading ? <LoadingState /> : vehicles.error ? <ErrorState message={vehicles.error} /> : vehicles.data?.length ? (
+          <>
+            {!cameraStream ? (
+              <button
+                className="button button-secondary resident-camera-start"
+                type="button"
+                onClick={startResidentCamera}
+                disabled={vehicles.loading || recognizingPlate}
+              >
+                <Icon name="camera" size={16} /> Tomar foto de la placa
+              </button>
+            ) : (
+              <div className="resident-camera-view">
+                <video ref={videoRef} autoPlay playsInline muted aria-label="Vista de la cámara del residente" />
+                <div className="resident-camera-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={captureAndRecognizePlate}
+                    disabled={recognizingPlate}
+                  >
+                    <Icon name="camera" size={16} /> Capturar y leer placa
+                  </button>
+                  <button className="button button-quiet" type="button" onClick={closeResidentCamera}>
+                    Cerrar cámara
+                  </button>
+                </div>
+              </div>
+            )}
+            {capturedPhoto && (
+              <img className="resident-captured-photo" src={capturedPhoto} alt="Foto de la placa capturada para reconocimiento local" />
+            )}
+            {cameraError && <p className="camera-inline-error" role="alert">{cameraError}</p>}
+            {recognizingPlate && (
+              <p className="resident-ocr-status" role="status">
+                {recognitionProgress
+                  ? `Reconociendo letras y números… ${recognitionProgress}%`
+                  : 'Preparando el reconocimiento de placa en el dispositivo…'}
+              </p>
+            )}
+            <form className="resident-scan-form" onSubmit={simulateResidentScan}>
+              <label className="field">
+                <span>Placa reconocida (puedes corregirla)</span>
+                <input
+                  value={scanPlate}
+                  onChange={(event) => {
+                    setScanPlate(event.target.value.toUpperCase().replace(/\s/g, ''))
+                    setScannedVehicle(null)
+                    setPlateConfidence(null)
+                    setPlateWasCorrected(false)
+                  }}
+                  placeholder="ABC123"
+                  maxLength={6}
+                  pattern="([A-Za-z]{3}[0-9]{3}|[A-Za-z]{3}[0-9]{2}[A-Za-z])"
+                  required
+                />
+                {plateConfidence !== null && (
+                  <small>
+                    {plateWasCorrected
+                      ? 'Se ajustó una confusión OCR al coincidir con uno de tus vehículos registrados. '
+                      : `Lectura OCR: ${plateConfidence}% de confianza. `}
+                    Verifica la placa antes de consultar.
+                  </small>
+                )}
+              </label>
+              <button className="button button-secondary" disabled={vehicles.loading || recognizingPlate || !vehicles.data?.length}>
+                <Icon name="search" size={16} /> Consultar mis documentos
+              </button>
+            </form>
+            <p className="demo-disclaimer">El reconocimiento de letras y números se procesa en este navegador; la foto no se envía al servidor. Los vencimientos de SOAT y RTM son simulados.</p>
+          </>
+        ) : (
+          <p className="demo-disclaimer">Primero registra un vehículo para poder reconocer y consultar una de tus placas.</p>
+        )}
         {scanError && <ErrorState message={scanError} />}
         {scannedVehicle && (
           <div className="resident-scan-result">
