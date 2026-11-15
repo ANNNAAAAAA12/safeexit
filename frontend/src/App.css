@@ -1244,6 +1244,257 @@
   gap: 17px;
 }
 
+.camera-demo-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  border: 1px solid #dcece6;
+  border-radius: 10px;
+  color: #52736a;
+  background: #f1faf6;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.camera-demo-notice svg {
+  flex: 0 0 auto;
+  color: #188a68;
+}
+
+.camera-demo-notice strong {
+  color: #28624f;
+}
+
+.camera-page-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(290px, 0.85fr);
+  align-items: start;
+  gap: 17px;
+}
+
+.camera-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 20px;
+  color: #879599;
+  background: #f2f5f5;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.camera-state > span,
+.camera-live-label > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9aa8ab;
+}
+
+.camera-state-active {
+  color: #16835f;
+  background: #e9f8f1;
+}
+
+.camera-state-active > span,
+.camera-live-label > span {
+  background: #2bc28e;
+  box-shadow: 0 0 0 3px rgba(43, 194, 142, 0.16);
+}
+
+.camera-preview {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background: #172a30;
+}
+
+.camera-preview video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: #d3e2e1;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(86, 145, 137, 0.26), transparent 40%),
+    #172a30;
+}
+
+.camera-placeholder > span {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 1px solid rgba(147, 203, 187, 0.3);
+  border-radius: 17px;
+  color: #8ed8bd;
+  background: rgba(99, 175, 150, 0.12);
+}
+
+.camera-placeholder strong {
+  font-size: 11px;
+}
+
+.camera-placeholder small {
+  color: #91aaa9;
+  font-size: 9px;
+}
+
+.camera-live-label {
+  position: absolute;
+  top: 11px;
+  left: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: #fff;
+  background: rgba(13, 30, 34, 0.7);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.camera-plate-field {
+  margin-top: 16px;
+}
+
+.camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.camera-inline-error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #f3d9d4;
+  border-radius: 8px;
+  color: #a64e40;
+  background: #fff7f5;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.camera-result-panel {
+  min-height: 270px;
+}
+
+.camera-empty {
+  display: flex;
+  min-height: 175px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: #8a9a9e;
+  text-align: center;
+}
+
+.camera-empty svg {
+  color: #52a88a;
+}
+
+.camera-empty strong {
+  color: #51646a;
+  font-size: 11px;
+}
+
+.camera-empty span {
+  font-size: 9px;
+}
+
+.camera-result-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.camera-result-plate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid #edf1f1;
+  border-radius: 8px;
+  background: #f9fbfb;
+}
+
+.camera-result-plate span {
+  color: #839196;
+  font-size: 9px;
+}
+
+.camera-result-plate strong {
+  color: #29444e;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.camera-source {
+  margin: 0;
+  color: #89979b;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.camera-fallback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid #edf1f1;
+}
+
+.camera-fallback-form > strong {
+  color: #55686d;
+  font-size: 10px;
+}
+
+.camera-fallback-form > small {
+  color: #8a989d;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.manual-fallback-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #63777c;
+  font-size: 10px;
+}
+
+.manual-fallback-toggle input {
+  accent-color: #159a71;
+}
+
+.demo-disclaimer {
+  margin: 0;
+  color: #8a989d;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .vehicle-list {
   display: flex;
   flex-direction: column;
@@ -1688,7 +1939,8 @@
   }
 
   .vehicle-layout,
-  .users-layout {
+  .users-layout,
+  .camera-page-grid {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
   }
 }
@@ -1817,8 +2069,13 @@
   .dashboard-columns,
   .vehicle-layout,
   .users-layout,
+  .camera-page-grid,
   .account-layout {
     grid-template-columns: 1fr;
+  }
+
+  .camera-preview {
+    aspect-ratio: 4 / 3;
   }
 }
 
@@ -2017,6 +2274,14 @@
   .form-row,
   .inline-edit-form {
     grid-template-columns: 1fr;
+  }
+
+  .camera-demo-notice {
+    padding: 11px;
+  }
+
+  .camera-actions > .button {
+    flex: 1 1 140px;
   }
 
   .inline-edit-form .form-actions {

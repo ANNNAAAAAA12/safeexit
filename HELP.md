@@ -9,7 +9,7 @@ Aplicación web y API REST para administrar residentes y vehículos, revisar fec
 - Node.js 22.12 o superior y npm, solo para ejecutar/desarrollar el frontend fuera de Docker
 - Maven wrapper incluido (`mvnw.cmd`)
 
-El proyecto usa Spring Boot 3.5 y PostgreSQL. Las integraciones externas se separan por interfaces: por defecto Plate Recognizer y WhatsApp usan mocks, así que el flujo de demostración no consume APIs ni necesita credenciales de terceros.
+El proyecto usa Spring Boot 3.5 y PostgreSQL. Las integraciones externas se separan por interfaces: por defecto el reconocimiento de placas, la consulta de SOAT/RTM y WhatsApp usan simulaciones, así que el flujo de demostración no consume APIs ni necesita credenciales de terceros. Los vencimientos simulados no son datos oficiales ni reemplazan una consulta autorizada al RUNT.
 
 ## Ejecutar localmente con Docker
 
@@ -46,7 +46,7 @@ PostgreSQL conserva datos en el volumen `postgres_data`. Si cambias `DB_PASSWORD
 
 ## Demostración rápida
 
-Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas y revisar auditorías. Los residentes pueden registrar vehículos y actualizar sus documentos.
+Entra al frontend con `SAFEEXIT_ADMIN_EMAIL` y `SAFEEXIT_ADMIN_PASSWORD` definidos en `.env`. Desde el panel puedes ver métricas, cambiar el período de anticipación de alertas, crear cuentas, revisar auditorías y abrir **Cámara**. La cámara muestra video local; la placa se simula y la consulta de SOAT/RTM devuelve datos sintéticos cada 8 segundos. El navegador debe tener permiso para usar la cámara. No se envía el video ni se leen placas reales. Los residentes pueden registrar vehículos sin escribir fechas: el mock les asigna fechas de SOAT/RTM. La opción de ingreso manual queda como respaldo.
 
 También puedes usar la API directamente. El siguiente ejemplo crea un residente y registra un vehículo con el SOAT vencido para generar una alerta:
 
@@ -102,7 +102,7 @@ Invoke-RestMethod `
   } | ConvertTo-Json)
 ```
 
-Para probar la salida con OCR simulado, envía una imagen JPEG o PNG de hasta 5 MB. El mock usa la placa configurada en `MOCK_PLATE` (por defecto `ABC123`):
+Para probar la salida del backend con OCR simulado, envía una imagen JPEG o PNG de hasta 5 MB. El mock usa la placa configurada en `MOCK_PLATE` (por defecto `ABC123`):
 
 ```powershell
 curl.exe -X POST http://localhost:8081/api/v1/lecturas/procesar-salida `
@@ -116,11 +116,11 @@ El mock simula una lectura OCR; no reconoce placas en la imagen. Con el vehícul
 Invoke-RestMethod -Uri http://localhost:8081/api/v1/alertas/historial -Headers $headersResidente
 ```
 
-La API registra la lectura, el evento y el envío simulado.
+La API registra la lectura, el evento y el envío simulado. Esta llamada es independiente de la vista **Cámara** del frontend, que solo muestra video y resultados sintéticos de SOAT/RTM.
 
 ## Frontend
 
-El frontend es una SPA de React y TypeScript. Muestra pantallas según el rol del JWT: administrador (resumen, usuarios, alertas y auditoría), residente (vehículos, alertas y teléfono) y auditor (solo auditoría). No necesita CORS en Docker porque Nginx sirve la aplicación y reenvía las llamadas a la API en el mismo origen.
+El frontend es una SPA de React y TypeScript. Muestra pantallas según el rol del JWT: administrador (resumen, cámara de demo, usuarios, alertas y auditoría), residente (vehículos, alertas y teléfono) y auditor (solo auditoría). La pantalla Cámara usa la cámara del dispositivo, pero la placa y las fechas de documentos son simuladas. No necesita CORS en Docker porque Nginx sirve la aplicación y reenvía las llamadas a la API en el mismo origen.
 
 Para desarrollo sin Docker, inicia primero el backend y después ejecuta:
 

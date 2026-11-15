@@ -104,6 +104,35 @@ class AutenticacionApiTests {
                                 "fechaVencRtm", LocalDate.now().plusDays(30).toString()))))
                 .andExpect(status().isCreated());
 
+        mockMvc.perform(post("/api/v1/vehiculos")
+                        .header("Authorization", "Bearer " + residentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "placa", "XYZ987",
+                                "tipoVehiculo", "MOTO",
+                                "marca", "Honda",
+                                "modelo", "CB"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.soat.fechaVencimiento").isNotEmpty())
+                .andExpect(jsonPath("$.rtm.fechaVencimiento").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/admin/demo/consulta-documentos/XYZ987")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.placa").value("XYZ987"))
+                .andExpect(jsonPath("$.fuenteConsulta").value("SIMULADA"))
+                .andExpect(jsonPath("$.soat.fechaVencimiento").isNotEmpty())
+                .andExpect(jsonPath("$.rtm.fechaVencimiento").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/vehiculos")
+                        .header("Authorization", "Bearer " + residentToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "placa", "LMN456",
+                                "tipoVehiculo", "CARRO",
+                                "fechaVencSoat", LocalDate.now().plusDays(30).toString()))))
+                .andExpect(status().isBadRequest());
+
         MockMultipartFile imagen = new MockMultipartFile(
                 "imagen", "salida.jpg", "image/jpeg",
                 new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x01});

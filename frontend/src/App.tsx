@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError, jsonBody, request } from './api'
 import { Icon, type IconName } from './icons'
+import { CameraPage } from './CameraPage'
 import type { LoginResponse, Session, UserRole } from './types'
 import {
   AccountPage,
@@ -12,13 +13,17 @@ import {
 } from './pages'
 import './App.css'
 
-type View = 'overview' | 'vehicles' | 'users' | 'alerts' | 'audit' | 'account'
+type View = 'overview' | 'camera' | 'vehicles' | 'users' | 'alerts' | 'audit' | 'account'
 type Notice = { kind: 'success' | 'error'; text: string }
 
 const pageDetails: Record<View, { title: string; subtitle: string }> = {
   overview: {
     title: 'Resumen',
     subtitle: 'El estado de la movilidad y la documentación de tu conjunto.',
+  },
+  camera: {
+    title: 'Cámara de salida',
+    subtitle: 'Video local y consulta simulada de documentos.',
   },
   vehicles: {
     title: 'Mis vehículos',
@@ -223,6 +228,7 @@ function ApplicationShell({
     role === 'ROLE_ADMIN'
       ? [
           { id: 'overview', label: 'Resumen', icon: 'grid' },
+          { id: 'camera', label: 'Cámara', icon: 'camera' },
           { id: 'users', label: 'Usuarios', icon: 'users' },
           { id: 'alerts', label: 'Alertas', icon: 'alert' },
           { id: 'audit', label: 'Auditoría', icon: 'audit' },
@@ -305,6 +311,9 @@ function ApplicationShell({
           </div>
           {view === 'overview' && role === 'ROLE_ADMIN' && (
             <DashboardPage session={session} onNotify={onNotify} />
+          )}
+          {view === 'camera' && role === 'ROLE_ADMIN' && (
+            <CameraPage session={session} />
           )}
           {view === 'vehicles' && role === 'ROLE_RESIDENT' && (
             <VehiclesPage session={session} onNotify={onNotify} />

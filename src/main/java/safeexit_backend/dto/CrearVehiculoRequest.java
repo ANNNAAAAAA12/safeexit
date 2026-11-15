@@ -1,6 +1,7 @@
 package safeexit_backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -15,6 +16,11 @@ public record CrearVehiculoRequest(
         @NotNull TipoVehiculo tipoVehiculo,
         @Size(max = 50) String marca,
         @Size(max = 50) String modelo,
-        @NotNull LocalDate fechaVencSoat,
-        @NotNull LocalDate fechaVencRtm) {
+        LocalDate fechaVencSoat,
+        LocalDate fechaVencRtm) {
+
+    @AssertTrue(message = "Para el ingreso manual debe proporcionar las fechas de SOAT y RTM")
+    public boolean isManualFallbackComplete() {
+        return (fechaVencSoat == null) == (fechaVencRtm == null);
+    }
 }

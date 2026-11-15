@@ -4,6 +4,7 @@ export type IconName =
   | 'activity'
   | 'alert'
   | 'audit'
+  | 'camera'
   | 'car'
   | 'check'
   | 'chevron'
@@ -19,6 +20,7 @@ const paths: Record<IconName, ReactNode> = {
   activity: <><path d="M3 12h4l3-8 4 16 3-8h4" /></>,
   alert: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
   audit: <><path d="M8 3h8l4 4v14H4V3z" /><path d="M8 12h8M8 16h6M16 3v5h5" /></>,
+  camera: <><path d="M14 5h-4l-2 2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></>,
   car: <><path d="m5 11 1.5-5h11L19 11" /><path d="M3 11h18v7H3z" /><path d="M6 18v2m12-2v2M6 14h.01M18 14h.01" /></>,
   check: <><path d="m5 12 4 4L19 6" /></>,
   chevron: <><path d="m9 18 6-6-6-6" /></>,

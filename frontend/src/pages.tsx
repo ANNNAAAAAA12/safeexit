@@ -308,6 +308,7 @@ export function VehiclesPage({
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [editSoat, setEditSoat] = useState('')
   const [editRtm, setEditRtm] = useState('')
+  const [manualDates, setManualDates] = useState(false)
 
   async function addVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -323,13 +324,16 @@ export function VehiclesPage({
           tipoVehiculo: form.get('tipoVehiculo'),
           marca: form.get('marca'),
           modelo: form.get('modelo'),
-          fechaVencSoat: form.get('fechaVencSoat'),
-          fechaVencRtm: form.get('fechaVencRtm'),
+          ...(manualDates ? {
+            fechaVencSoat: form.get('fechaVencSoat'),
+            fechaVencRtm: form.get('fechaVencRtm'),
+          } : {}),
         }),
       })
       formElement.reset()
+      setManualDates(false)
       vehicles.reload()
-      onNotify({ kind: 'success', text: 'Vehículo registrado correctamente.' })
+      onNotify({ kind: 'success', text: 'Vehículo registrado; SOAT y RTM se consultaron en modo demo.' })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No fue posible registrar el vehículo.')
     } finally {
@@ -361,11 +365,11 @@ export function VehiclesPage({
     <div className="page-stack">
       <div className="vehicle-summary-strip">
         <span className="summary-icon"><Icon name="car" size={20} /></span>
-        <div><strong>{vehicles.data?.length ?? 0} vehículos registrados</strong><span>Las fechas se validan automáticamente al salir del conjunto.</span></div>
+        <div><strong>{vehicles.data?.length ?? 0} vehículos registrados</strong><span>La demo simula la consulta de SOAT y RTM; no verifica datos oficiales.</span></div>
         <span className="summary-shield"><Icon name="shield" size={21} /></span>
       </div>
       <div className="vehicle-layout">
-        <PageCard title="Vehículos registrados" caption="Estado actual de SOAT y revisión técnico-mecánica">
+        <PageCard title="Vehículos registrados" caption="Estado de SOAT y revisión técnico-mecánica">
           {vehicles.loading ? <LoadingState /> : vehicles.error ? <ErrorState message={vehicles.error} /> :
             vehicles.data?.length ? (
               <div className="vehicle-list">
@@ -412,7 +416,7 @@ export function VehiclesPage({
               </div>
             ) : <EmptyState title="Aún no registras vehículos" detail="Completa el formulario para añadir el primero." />}
         </PageCard>
-        <PageCard title="Registrar vehículo" caption="Agrega la información del vehículo y sus documentos.">
+        <PageCard title="Registrar vehículo" caption="Las fechas se consultan automáticamente en modo demo.">
           <form className="form-stack form-compact" onSubmit={addVehicle}>
             <label className="field">
               <span>Placa</span>
@@ -424,10 +428,21 @@ export function VehiclesPage({
               <label className="field"><span>Marca</span><input name="marca" maxLength={50} placeholder="Ej. Mazda" /></label>
             </div>
             <label className="field"><span>Modelo</span><input name="modelo" maxLength={50} placeholder="Ej. CX-30" /></label>
-            <div className="form-row">
-              <label className="field"><span>Vence SOAT</span><input name="fechaVencSoat" type="date" required /></label>
-              <label className="field"><span>Vence RTM</span><input name="fechaVencRtm" type="date" required /></label>
-            </div>
+            <label className="manual-fallback-toggle">
+              <input
+                type="checkbox"
+                checked={manualDates}
+                onChange={(event) => setManualDates(event.target.checked)}
+              />
+              <span>Ingresar fechas manualmente (respaldo)</span>
+            </label>
+            {manualDates && (
+              <div className="form-row">
+                <label className="field"><span>Vence SOAT</span><input name="fechaVencSoat" type="date" required /></label>
+                <label className="field"><span>Vence RTM</span><input name="fechaVencRtm" type="date" required /></label>
+              </div>
+            )}
+            <p className="demo-disclaimer">La consulta es simulada y no reemplaza una verificación oficial del RUNT.</p>
             {error && <ErrorState message={error} />}
             <button className="button button-primary button-wide" disabled={saving}>
               {saving ? <span className="spinner" /> : <><Icon name="plus" size={17} /> Registrar vehículo</>}

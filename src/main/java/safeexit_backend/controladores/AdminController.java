@@ -2,12 +2,15 @@ package safeexit_backend.controladores;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import safeexit_backend.dto.CambiarEstadoUsuarioRequest;
 import safeexit_backend.dto.CrearUsuarioRequest;
 import safeexit_backend.dto.ActualizarParametrosRequest;
 import safeexit_backend.dto.ActualizarConjuntoRequest;
 import safeexit_backend.dto.ConjuntoResponse;
+import safeexit_backend.dto.ConsultaDocumentosResponse;
 import safeexit_backend.dto.MetricasResponse;
 import safeexit_backend.dto.UsuarioResponse;
 import safeexit_backend.dto.ParametrosSistemaResponse;
@@ -15,6 +18,7 @@ import safeexit_backend.servicios.ParametrosSistemaService;
 import safeexit_backend.servicios.MetricasService;
 import safeexit_backend.servicios.ConjuntoResidencialService;
 import safeexit_backend.servicios.UsuarioService;
+import safeexit_backend.servicios.VehiculoService;
 
 import java.util.List;
 
@@ -26,16 +30,19 @@ public class AdminController {
     private final ParametrosSistemaService parametrosService;
     private final MetricasService metricasService;
     private final ConjuntoResidencialService conjuntoService;
+    private final VehiculoService vehiculoService;
 
     public AdminController(
             UsuarioService usuarioService,
             ParametrosSistemaService parametrosService,
             MetricasService metricasService,
-            ConjuntoResidencialService conjuntoService) {
+            ConjuntoResidencialService conjuntoService,
+            VehiculoService vehiculoService) {
         this.usuarioService = usuarioService;
         this.parametrosService = parametrosService;
         this.metricasService = metricasService;
         this.conjuntoService = conjuntoService;
+        this.vehiculoService = vehiculoService;
     }
 
     @GetMapping("/usuarios")
@@ -76,6 +83,13 @@ public class AdminController {
     @GetMapping("/conjuntos")
     public List<ConjuntoResponse> listarConjuntos() {
         return conjuntoService.listar();
+    }
+
+    @GetMapping("/demo/consulta-documentos/{placa}")
+    public ConsultaDocumentosResponse consultarDocumentosDemo(
+            @AuthenticationPrincipal UserDetails usuario,
+            @PathVariable String placa) {
+        return vehiculoService.consultarDocumentosDemo(usuario.getUsername(), placa);
     }
 
     @PutMapping("/conjuntos/{id}")
